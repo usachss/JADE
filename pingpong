@@ -5,6 +5,7 @@ import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.DFService;
 import jade.domain.FIPAException;
+//-gui ping:PINGPONG(True);pong:PINGPONG(False);
 
 
 //есть адресная книга эта - DF-aгент
