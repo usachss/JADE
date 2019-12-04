@@ -1,0 +1,117 @@
+import jade.core.Agent;
+import jade.core.behaviours.*;
+import jade.lang.acl.ACLMessage;
+import jade.domain.FIPAAgentManagement.ServiceDescription;
+import jade.domain.FIPAAgentManagement.DFAgentDescription;
+import jade.domain.DFService;
+import jade.domain.FIPAException;
+
+
+//есть адресная книга эта - DF-aгент
+//и есть два агента, которые создаешь ты
+//надо написать такой код, чтобы один обычный агент обращался к адресной книге, находил второго обычного агента и отправлял ему message "Пинг", а тот ему отвечал "Понг"
+//а потом чтобы они менялись поведенями и аналогично переписывались
+public class PINGPONG extends Agent {
+   private Boolean isWaiting;
+
+
+    private class PingSEND extends OneShotBehaviour {
+
+        public void action () {
+            System.out.println("Ping");
+            DFAgentDescription dfd1 = new DFAgentDescription();
+            ServiceDescription sd1 = new ServiceDescription();
+            sd1.setType("PingPongAgents");
+            dfd1.addServices(sd1);
+
+            {
+                try { DFService.deregister(PINGPONG.this); }
+                catch (Exception e) {}
+            }
+            DFAgentDescription[] result = new DFAgentDescription[0];
+            try {
+                result = DFService.search(PINGPONG.this, dfd1);
+            } catch (FIPAException e) {
+                e.printStackTrace();
+            }
+            ACLMessage msg1 = new ACLMessage(ACLMessage.INFORM);
+            msg1.setContent("Ping");
+            msg1.addReceiver(result[0].getName());
+            send(msg1);
+            //System.out.println(result.length + "results");
+            //if (result.length>0)
+            //System.out.println("aa" + result[0].getName());
+            //String k = result[1].getName().toString();
+            //System.out.println("BRBRBRB" + k);
+            //  for (int  w=0; w < k.length();)
+            //String name = k.substring(25, k.length() - 73);
+            PINGPONG.this.addBehaviour(new PINGPONG.ReplyPong());
+            PINGPONG.this.isWaiting = true;
+
+        }
+
+    }
+    private class ReplyPong extends Behaviour {
+        Boolean terminated = false;
+        public void onStart() {
+            System.out.println("Pong");
+
+            DFAgentDescription dfd1 = new DFAgentDescription();
+            ServiceDescription sd1 = new ServiceDescription();
+            sd1.setType("PingPongAgents");
+            sd1.setName("Ponger");
+            dfd1.addServices(sd1);
+            dfd1.setName(getAID());
+
+            try {
+                DFService.register(PINGPONG.this, dfd1);
+                //ReplyPong PingBehaviour = new ReplyPong(this);
+                //addBehaviour(PingBehaviour);
+            } catch (FIPAException e) {
+                System.out.println("Agent " + getLocalName() + " - Cannot register with DF");
+                doDelete();
+            }
+
+        }
+
+        public void action() {
+
+
+            ACLMessage msg = receive();
+            if ((msg != null)&&(msg.getContent().equals("Ping"))) {
+                ACLMessage msg1 = new ACLMessage(ACLMessage.INFORM);
+                msg1.setContent("Pong");
+                PINGPONG.this.isWaiting = false;
+                msg1.addReceiver(msg.getSender());
+                send(msg1);
+                terminated = true;
+                PINGPONG.this.addBehaviour(new PINGPONG.PingSEND());
+                PINGPONG.this.isWaiting = false;
+            }
+
+        }
+            public boolean done() {
+            return terminated;
+            }
+        }
+
+
+    protected void setup() {
+        Object[] args = getArguments();
+        isWaiting = Boolean.valueOf((String)args[0]); // this returns the String 1
+        //System.out.println(isWaiting);
+        if (isWaiting == true) {
+            addBehaviour(new ReplyPong() );
+
+        }
+        else {
+
+            addBehaviour(new PingSEND());
+        }
+
+
+
+
+            //System.out.println("bb" + result[1].getName());
+    }
+}
